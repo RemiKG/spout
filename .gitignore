@@ -1,0 +1,41 @@
+# dependencies
+/node_modules
+/services/*/node_modules
+/.pnp
+.pnp.js
+# local npm cache (used only to sidestep a Windows global-cache race during build)
+/.npmcache
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+/dist
+
+# misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files — NEVER commit secrets (this repo is published)
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.production.local
+
+# runtime data (server-side persistence dev artifacts)
+/.data/
+*.local.ndjson
+
+# vercel / typescript
+.vercel
+*.tsbuildinfo

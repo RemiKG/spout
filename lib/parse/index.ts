@@ -66,3 +66,72 @@ function parseCsv(text: string): RawLine[] {
       desc = cells.filter((c) => c && !DATE_RE.test(c) && !/^-?\$?[\d.,]+$/.test(c)).sort((a, b) => b.length - a.length)[0] || "";
     }
     if (!amtCell) amtCell = cells.find((c) => /^-?\(?\$?[\d.,]+\)?$/.test(c)) || "";
+    const amount = parseAmount(amtCell);
+    const dm = date.match(DATE_RE);
+    if (!desc || isNaN(amount)) continue;
+    out.push({ id: nextId(), descriptor: desc, amount, date: dm ? toISO(dm[1]) : date, card: idx.card >= 0 ? cells[idx.card] : undefined });
+  }
+  return out;
+}
+
+// ---- PDF (text layer) -------------------------------------------------------
+async function parsePdf(file: File): Promise<{ lines: RawLine[]; text: string }> {
+  const pdfjs: typeof import("pdfjs-dist") = await import("pdfjs-dist");
+  // worker copied to /public at build time
+  (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjs.getDocument({ data: buf }).promise;
+  const lines: RawLine[] = [];
+  let allText = "";
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    // group items into visual lines by their y position
+    const byLine = new Map<number, string[]>();
+    for (const it of content.items as { str: string; transform: number[] }[]) {
+      const y = Math.round(it.transform[5]);
+      (byLine.get(y) || byLine.set(y, []).get(y)!).push(it.str);
+    }
+    for (const [, parts] of [...byLine.entries()].sort((a, b) => b[0] - a[0])) {
+      const line = parts.join(" ").replace(/\s+/g, " ").trim();
+      if (!line) continue;
+      allText += line + "\n";
+      const dm = line.match(DATE_RE);
+      const amts = line.match(AMT_RE);
+      if (dm && amts && amts.length) {
+        const amount = parseAmount(amts[amts.length - 1]);
+        const desc = line.replace(DATE_RE, "").replace(AMT_RE, "").replace(/\s+/g, " ").trim();
+        if (desc && !isNaN(amount)) lines.push({ id: nextId(), descriptor: desc, amount, date: toISO(dm[1]) });
+      }
+    }
+  }
+  return { lines, text: allText };
+}
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+export async function parseFile(file: File): Promise<ParseResult> {
+  const name = file.name.toLowerCase();
+  const type = file.type;
+  if (name.endsWith(".csv") || type === "text/csv") {
+    return { kind: "csv", lines: parseCsv(await file.text()) };
+  }
+  if (type.startsWith("image/")) {
+    return { kind: "image", lines: [], imageDataUrl: await readAsDataUrl(file), needsVL: true };
+  }
+  if (name.endsWith(".pdf") || type === "application/pdf") {
+    const { lines } = await parsePdf(file);
+    if (lines.length >= 2) return { kind: "pdf", lines };
+    // scanned PDF with no text layer → needs the VL reader
+    return { kind: "image", lines: [], imageDataUrl: await readAsDataUrl(file), needsVL: true };
+  }
+  // fallback: try CSV parse of text
+  return { kind: "csv", lines: parseCsv(await file.text()) };
+}

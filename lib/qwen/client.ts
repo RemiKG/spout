@@ -53,3 +53,59 @@ export interface ChatOpts {
  *  extra request body when asked. Returns the assistant message. */
 export async function chat(opts: ChatOpts): Promise<OpenAI.Chat.ChatCompletionMessage> {
   const client = qwen();
+  const messages = opts.system
+    ? [{ role: "system" as const, content: opts.system }, ...opts.messages]
+    : opts.messages;
+
+  const body: Record<string, unknown> = {
+    model: opts.model,
+    messages,
+    temperature: opts.temperature ?? 0.2,
+    max_tokens: opts.maxTokens ?? 1400,
+  };
+  if (opts.json) body.response_format = { type: "json_object" };
+  if (opts.tools) body.tools = opts.tools;
+  if (opts.thinking) {
+    // DashScope thinking controls (passed through compatible-mode extra body).
+    body.enable_thinking = true;
+    body.preserve_thinking = true;
+  }
+
+  const res = (await client.chat.completions.create(body as never)) as OpenAI.Chat.ChatCompletion;
+  return res.choices[0].message;
+}
+
+/** Parse a JSON object out of a model message, tolerating ```json fences. */
+export function parseJson<T = unknown>(text: string | null | undefined): T {
+  if (!text) throw new Error("empty model response");
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const raw = fenced ? fenced[1] : text;
+  const start = raw.indexOf("{");
+  const startArr = raw.indexOf("[");
+  const from = start === -1 ? startArr : startArr === -1 ? start : Math.min(start, startArr);
+  const slice = from >= 0 ? raw.slice(from) : raw;
+  return JSON.parse(slice) as T;
+}
+
+/** text-embedding-v4 — embed a batch of strings (max 250/call on DashScope). */
+export async function embed(texts: string[], model: string): Promise<number[][]> {
+  const client = qwen();
+  const out: number[][] = [];
+  for (let i = 0; i < texts.length; i += 250) {
+    const batch = texts.slice(i, i + 250);
+    const res = await client.embeddings.create({ model, input: batch });
+    for (const d of res.data) out.push(d.embedding as unknown as number[]);
+  }
+  return out;
+}
+
+/** Cosine similarity, for clustering descriptors across cards. */
+export function cosine(a: number[], b: number[]): number {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+}

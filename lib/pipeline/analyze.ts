@@ -69,3 +69,75 @@ export async function analyzeStatement(lines: RawLine[], opts: AnalyzeOpts = {})
       sacred: sacred || undefined,
       regexCaught: baselineFlagged(cl.descriptors, baseline) || undefined,
     };
+    if (verdict === "keep") kept.push(charge);
+    else charges.push(charge);
+  }
+
+  // sort charges: cut first (by $ desc), trials, then asks
+  charges.sort((a, b) => rank(a) - rank(b) || b.amountYear - a.amountYear);
+
+  const totalYear = charges
+    .filter((c) => c.verdict === "cut" && c.cadence !== "trial")
+    .reduce((s, c) => s + c.amountYear, 0);
+
+  return {
+    charges,
+    kept,
+    totalYear,
+    spoutCaught: charges.length,
+    regexCaught: baseline.caught,
+    comparison: buildComparison(charges, baseline.caught),
+    lines: lines.length,
+    recurring: clusters.filter((c) => c.occurrences.length >= 2).length,
+    demo: !!opts.demo,
+    ai: hasQwen(),
+  };
+}
+
+function rank(c: Charge): number {
+  return c.verdict === "cut" ? (c.cadence === "trial" ? 1 : 0) : 2;
+}
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+// ---- un-mask (batched disambiguate-merchant) --------------------------------
+interface DecodedCluster extends Cluster {
+  merchant: string | null;
+  category: string;
+  confidence: number;
+}
+
+async function decodeClusters(clusters: Cluster[]): Promise<DecodedCluster[]> {
+  const payload = clusters.map((c) => ({
+    id: c.id,
+    descriptor: c.descriptors.join(" | "),
+    amounts: c.occurrences.map((o) => o.amount),
+    cards: c.cards.length,
+  }));
+  try {
+    const msg = await chat({
+      model: MODELS.unmask,
+      system: SKILLS.disambiguateMerchant.system +
+        '\nYou will get an ARRAY of clusters. Reply ONLY: {"results":[{"id","merchant","category","confidence"}]} — one per input id.',
+      messages: [{ role: "user", content: JSON.stringify({ clusters: payload }) }],
+      json: true,
+    });
+    const out = parseJson<{ results: { id: string; merchant: string | null; category?: string; confidence: number }[] }>(msg.content);
+    const byId = new Map(out.results.map((r) => [r.id, r]));
+    return clusters.map((c) => {
+      const r = byId.get(c.id);
+      return { ...c, merchant: r?.merchant ?? null, category: r?.category ?? "", confidence: clamp(r?.confidence ?? 0.4) };
+    });
+  } catch {
+    // degrade: no decode, keep raw descriptor as merchant guess
+    return clusters.map((c) => ({ ...c, merchant: null, category: "", confidence: 0.3 }));
+  }
+}
+
+// ---- detect (batched detect-recurring) --------------------------------------
+interface DetectedCharge extends DecodedCluster {
+  cadence: Charge["cadence"];
+  amountMonthly: number;
+  amountYear: number;
+  reasons: Reason[];

@@ -1,0 +1,154 @@
+{
+  "_note": "Spout cancel-directory — a MAINTAINED, curated dataset (merchant → cancellation channel/policy/script). It is NOT a live web crawl. The DECODE of your charge is live (Qwen); the channel it maps to comes from this file, with an honest one-tap pack fallback when a merchant is unknown. Real-merchant entries are best-effort and conservative; always follow the merchant's current on-screen steps. Demo merchants (NewsPlus, Streamflix, MealBoxes, RingtoneClub, CloudGym, PhotoApp) are fictionalised.",
+  "version": "2026.07",
+  "entries": [
+    {
+      "key": "anytime-fitness",
+      "name": "Anytime Fitness",
+      "aliases": ["anytime", "gym8xj", "sq *gym"],
+      "channel": "email",
+      "email": "memberservices@anytimefitness.com",
+      "policy": "Most clubs require written notice (email or in-person) ~30 days before the next billing date; terms vary by franchise location.",
+      "rights": "Under the club membership contract's cancellation terms and applicable consumer-protection law, a member may cancel with written notice; the club must confirm the cancellation and final billing date in writing.",
+      "script": "Email member services (or your home club) with your name and membership; state you are cancelling effective end of the current billing period; request written confirmation of the final bill."
+    },
+    {
+      "key": "icloud",
+      "name": "iCloud+",
+      "aliases": ["apl*icloud", "apple", "aplpay", "icloud storage"],
+      "channel": "portal",
+      "deepLink": "https://support.apple.com/en-us/HT207594",
+      "policy": "Managed under Apple ID → Subscriptions / iCloud storage. Takes effect at the end of the current billing period.",
+      "script": "iPhone/iPad: Settings → your name → iCloud → Manage Account Storage → Change Storage Plan → Downgrade. Or Mac: System Settings → Apple ID → iCloud."
+    },
+    {
+      "key": "newsplus",
+      "name": "NewsPlus",
+      "aliases": ["dd/bill 4457", "newsplus"],
+      "channel": "email",
+      "email": "cancellations@newsplus.example",
+      "policy": "Digital news subscription; cancellable in writing effective end of cycle. (Demo merchant — fictionalised.)",
+      "rights": "Please confirm the cancellation and the final billing date in writing; I do not authorise further charges.",
+      "script": "Reply to your billing confirmation email asking to cancel effective end of cycle, and request written confirmation."
+    },
+    {
+      "key": "streamflix",
+      "name": "Streamflix",
+      "aliases": ["nflx*", "streamflix", "sfx*"],
+      "channel": "email",
+      "email": "support@streamflix.example",
+      "policy": "Video streaming; cancel anytime, effective end of the paid period. (Demo merchant — fictionalised.)",
+      "rights": "Please cancel effective end of the current period and confirm in writing.",
+      "script": "Account → Membership → Cancel Membership. If billed on two cards, cancel the duplicate and keep one."
+    },
+    {
+      "key": "mealboxes",
+      "name": "MealBoxes",
+      "aliases": ["sq*mb2231", "mealbox", "meal boxes"],
+      "channel": "portal",
+      "deepLink": "https://mealboxes.example/account/plan",
+      "policy": "Meal-kit subscription; pausing does NOT stop billing — you must cancel the plan. (Demo merchant — fictionalised.)",
+      "script": "1 · open account → plan → cancel plan  ·  2 · reason: “too expensive”  ·  3 · decline the pause offer, confirm"
+    },
+    {
+      "key": "ringtoneclub",
+      "name": "RingtoneClub",
+      "aliases": ["bill*rng88", "ringtone"],
+      "channel": "phone",
+      "phone": "1-800-000-0000",
+      "policy": "Premium-SMS style micro-subscription; often cancel by texting STOP or by phone. Frequently an unrecognised 'gray' charge. (Demo merchant — fictionalised.)",
+      "script": "Text STOP to the shortcode on the charge, or call the number on your statement; ask them to stop all future billing and confirm."
+    },
+    {
+      "key": "cloudgym",
+      "name": "CloudGym",
+      "aliases": ["google*temp", "cloudgym", "cloud gym"],
+      "channel": "email",
+      "email": "billing@cloudgym.example",
+      "policy": "Free trial converting to paid ($19.99/mo) in 3 days. Cancel BEFORE the trial ends to avoid the first charge. (Demo merchant — fictionalised.)",
+      "rights": "I am cancelling before my free trial converts; please confirm no charge will be made.",
+      "script": "Cancel in-app before the trial end date, or email billing to confirm the trial will not convert."
+    },
+    {
+      "key": "photoapp",
+      "name": "PhotoApp",
+      "aliases": ["pp*photoz", "photoz", "photo app"],
+      "channel": "portal",
+      "deepLink": "https://photoapp.example/settings/subscription",
+      "policy": "Photo-editing subscription. Spout is unsure whether this one is needed — it will ASK, not guess. (Demo merchant — fictionalised.)",
+      "script": "Account → Subscription → Cancel. (Only after you confirm you don't need it.)"
+    },
+    {
+      "key": "spotify",
+      "name": "Spotify",
+      "aliases": ["spotify"],
+      "channel": "portal",
+      "deepLink": "https://www.spotify.com/account/subscription/",
+      "policy": "Premium reverts to free at the end of the paid period; no cancellation fee.",
+      "script": "spotify.com → Account → Available plans / Your plan → Cancel Premium → Confirm."
+    },
+    {
+      "key": "netflix",
+      "name": "Netflix",
+      "aliases": ["netflix", "nflx"],
+      "channel": "portal",
+      "deepLink": "https://www.netflix.com/cancelplan",
+      "policy": "Cancel anytime; streaming continues to the end of the paid period.",
+      "script": "netflix.com → Account → Cancel Membership → Finish Cancellation."
+    },
+    {
+      "key": "amazon-prime",
+      "name": "Amazon Prime",
+      "aliases": ["amazon prime", "amzn prime", "prime"],
+      "channel": "portal",
+      "deepLink": "https://www.amazon.com/gp/primecentral",
+      "policy": "End membership from Prime Central; a pro-rated refund may apply if unused.",
+      "script": "Account → Prime membership → Update, cancel and more → End membership."
+    },
+    {
+      "key": "youtube-premium",
+      "name": "YouTube Premium",
+      "aliases": ["youtube premium", "google *youtube", "yt premium"],
+      "channel": "portal",
+      "deepLink": "https://www.youtube.com/paid_memberships",
+      "policy": "Benefits continue until the end of the billing period.",
+      "script": "youtube.com → your avatar → Purchases and memberships → Manage → Cancel."
+    },
+    {
+      "key": "adobe-cc",
+      "name": "Adobe Creative Cloud",
+      "aliases": ["adobe", "adobe creative"],
+      "channel": "portal",
+      "deepLink": "https://account.adobe.com/plans",
+      "policy": "Annual plans cancelled early may incur an early-termination fee (up to 50% of remaining term).",
+      "script": "account.adobe.com → Plans → Manage plan → Cancel your plan."
+    },
+    {
+      "key": "planet-fitness",
+      "name": "Planet Fitness",
+      "aliases": ["planet fitness", "pf"],
+      "channel": "portal",
+      "policy": "Usually cancel in-club or by certified mail; some locations allow app cancellation.",
+      "script": "Visit your home club to cancel, or send written notice by certified mail; keep the receipt."
+    },
+    {
+      "key": "audible",
+      "name": "Audible",
+      "aliases": ["audible", "audible*"],
+      "channel": "portal",
+      "deepLink": "https://www.audible.com/account/membership",
+      "policy": "Cancel from membership settings; unused credits may be forfeited.",
+      "script": "audible.com → Account Details → Cancel membership."
+    },
+    {
+      "key": "nyt",
+      "name": "The New York Times",
+      "aliases": ["nyt", "new york times", "nytimes"],
+      "channel": "phone",
+      "phone": "1-800-000-0000",
+      "deepLink": "https://www.nytimes.com/subscription",
+      "policy": "Online cancellation often routes to a chat/phone confirmation for some plans.",
+      "script": "Account → Manage subscription → Cancel; complete the chat/phone confirmation if prompted."
+    }
+  ]
+}

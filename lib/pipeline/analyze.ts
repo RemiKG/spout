@@ -141,3 +141,65 @@ interface DetectedCharge extends DecodedCluster {
   amountMonthly: number;
   amountYear: number;
   reasons: Reason[];
+  verdict: Verdict;
+}
+
+async function detectPatterns(decoded: DecodedCluster[]): Promise<DetectedCharge[]> {
+  const payload = decoded.map((c) => ({
+    id: c.id,
+    merchant: c.merchant,
+    category: c.category,
+    confidence: c.confidence,
+    history: c.occurrences,
+    cards: c.cards.length,
+  }));
+  try {
+    const msg = await chat({
+      model: MODELS.detect,
+      system: SKILLS.detectRecurring.system +
+        "\nOnly return charges worth surfacing to the user (recurring subscriptions, trials, and silent leaks). Skip one-off purchases, groceries, rent, transfers and income.",
+      messages: [{ role: "user", content: JSON.stringify({ charges: payload }) }],
+      json: true,
+      maxTokens: 2200,
+    });
+    const out = parseJson<{ charges: { id: string; cadence: Charge["cadence"]; amountMonthly: number; amountYear: number; reasons: Reason[]; verdict: Verdict }[] }>(msg.content);
+    const byId = new Map(out.charges.map((r) => [r.id, r]));
+    const result: DetectedCharge[] = [];
+    for (const c of decoded) {
+      const r = byId.get(c.id);
+      if (!r) continue; // not surfaced by the model → not a subscription
+      result.push({ ...c, cadence: r.cadence, amountMonthly: r.amountMonthly, amountYear: r.amountYear, reasons: r.reasons || [], verdict: r.verdict });
+    }
+    return result;
+  } catch {
+    // degrade: flag anything recurring ≥2 as a plain recurring charge
+    return decoded
+      .filter((c) => c.occurrences.length >= 2)
+      .map((c) => {
+        const monthly = c.occurrences[c.occurrences.length - 1].amount;
+        return {
+          ...c,
+          cadence: "monthly" as const,
+          amountMonthly: monthly,
+          amountYear: Math.round(monthly * 12),
+          reasons: [{ kind: "recurring", label: "recurring charge" } as Reason],
+          verdict: "ask" as Verdict,
+        };
+      });
+  }
+}
+
+function clamp(n: number): number {
+  return Math.max(0, Math.min(1, n));
+}
+
+export function buildComparison(charges: Charge[], regexCaught: number) {
+  const has = (k: string) => charges.some((c) => c.reasons.some((r) => r.kind === k));
+  return [
+    { what: "obvious monthly dupes", regex: "yes" as const, spout: "yes" as const },
+    { what: "cryptic descriptor → merchant", regex: "no" as const, spout: "yes" as const },
+    { what: "price creep", regex: "no" as const, spout: (has("price_creep") ? "yes" : "no") as "yes" | "no" },
+    { what: "trial converting", regex: "no" as const, spout: (has("trial_converting") ? "yes" : "no") as "yes" | "no" },
+    { what: "same service, 2 cards", regex: "partial" as const, spout: (has("duplicate") ? "yes" : "no") as "yes" | "no" },
+  ];
+}

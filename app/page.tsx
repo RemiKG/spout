@@ -39,3 +39,44 @@ export default function Landing() {
         <div style={{ fontFamily: "var(--serif)", fontWeight: 700, fontSize: 22, color: "var(--ink)" }}>
           Drop your statement to find your leaks
         </div>
+        <div className="sub" style={{ margin: 0 }}>PDF or CSV — every bank exports one. Photographed or scanned is fine.</div>
+        <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap", justifyContent: "center" }}>
+          <button className="btn brass" onClick={() => fileRef.current?.click()}>Choose a statement</button>
+          <button className="btn ghost" onClick={() => { go(); startDemo(); }}>▷ Watch the 30-second demo</button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,.pdf,image/*,text/csv,application/pdf"
+          hidden
+          onChange={(e) => onFile(e.target.files?.[0])}
+        />
+      </div>
+
+      <div className="pipe" style={{ marginTop: 20 }}>
+        <span>① read any format</span><span className="mut">→</span>
+        <span>② un-mask each charge</span><span className="mut">→</span>
+        <span>③ find the silent stuff</span><span className="mut">→</span>
+        <span>④ you approve every shut</span>
+      </div>
+
+      <div className="reassure">
+        <div><b>◆</b> No account needed to see your leaks</div>
+        <div><b>◆</b> Account numbers redacted on your device <i>before</i> anything is read</div>
+        <div><b>◆</b> Nothing sent or cancelled without your nod</div>
+      </div>
+
+      <OtterCorner />
+    </div>
+  );
+}
+
+function OtterCorner() {
+  return (
+    <div className="otter-corner" aria-hidden>
+      <div className="otter-speech">&ldquo;Point me at the pipes. I&rsquo;ll wait at every valve.&rdquo;</div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/art/otter-gate.png" alt="" />
+    </div>
+  );
+}

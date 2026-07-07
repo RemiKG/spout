@@ -1,0 +1,19 @@
+# Spout on Alibaba Cloud ECS/SAS. `docker compose up -d` after adding a .env.
+# The app runs fully without any secrets (demo + on-device redaction + regex
+# baseline); each env var below turns on its real capability when present.
+services:
+  spout:
+    build: .
+    image: spout:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # Qwen Cloud (Alibaba Model Studio / DashScope International)
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
+      - QWEN_BASE_URL=${QWEN_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
+      # opt-in Gmail send / Calendar (the user's own inbox)
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID:-}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI:-}
+      - SPOUT_SESSION_SECRET=${SPOUT_SESSION_SECRET:-}
+    restart: unless-stopped

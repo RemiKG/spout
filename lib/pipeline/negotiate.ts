@@ -22,3 +22,27 @@ export async function negotiate(merchant: string, thread: ThreadMessage[]): Prom
         messages: [
           {
             role: "user",
+            content: JSON.stringify({
+              merchant,
+              thread: thread.map((m) => ({ role: m.role, from: m.from, body: m.body })),
+            }),
+          },
+        ],
+        json: true,
+      });
+      const r = NegotiateSchema.parse(parseJson(msg.content));
+      return { offer: r.offer, counter: r.counter, recommendation: r.recommendation };
+    } catch {
+      /* fall through */
+    }
+  }
+  // deterministic fallback counter (no key)
+  return {
+    offer: null,
+    counter:
+      `Thanks, but a temporary discount that reverts later isn't worth it to me. ` +
+      `I'll stay only if you can lock the discounted rate for a full 12 months. ` +
+      `Otherwise please proceed with the cancellation at the end of the cycle and confirm in writing.`,
+    recommendation: "Hold out for a durable rate, or cancel — your call at Gate 3.",
+  };
+}

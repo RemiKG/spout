@@ -92,3 +92,67 @@ repo/
 | **Regex baseline** beside every run (the `2 vs 7` proof) | ✅ real, deterministic, keyless |
 | **Decode** cryptic descriptor → merchant · **detect** trials/creep/dupes/gray | ✅ real via Qwen — behind `DASHSCOPE_API_KEY` |
 | **Draft** channel-correct, rights-citing cancellation | ✅ real via Qwen; genuine template fallback with no key |
+| **Send** from your own inbox + read the reply thread | ✅ real via Gmail OAuth (opt-in) — behind `GOOGLE_OAUTH_*` |
+| **Negotiate** the retention offer (`qwen3.7-max`, `preserve_thinking`) | ✅ real via Qwen |
+| Portal/phone merchants → **honest one-tap pack** (never a fake "cancelled") | ✅ real |
+| **Cancel-directory** (merchant→channel) — a *maintained dataset*, not a live crawl | ✅ real dataset |
+| Receipt **ledger** (append-only, hash-chained NDJSON) persists; keep-list + settings persist | ✅ real (browser) |
+| Your statement is **not** stored after the session | ✅ real |
+| **No money ever moves** — reclaimed = money you *stop paying*, annualised | ✅ by design |
+
+When a credential is absent, the matching capability **degrades honestly** (it says so plainly and keeps the baseline/pack/demo working) — it is never faked. `GET /api/health` reports what's live.
+
+---
+
+## The Qwen engine
+
+All inference hits Qwen Cloud (Alibaba Model Studio / DashScope International), OpenAI-compatible mode, at `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` — visible in [`lib/qwen/client.ts`](lib/qwen/client.ts).
+
+| Job | Model | Skill |
+|---|---|---|
+| Read scanned/photographed statements | `qwen3-vl-plus` | — |
+| Cluster/dedupe descriptors | `text-embedding-v4` | — |
+| Un-mask descriptor → merchant | `qwen3.7-plus` | `disambiguate-merchant` |
+| Detect silent patterns (structured) | `qwen3.7-plus` | `detect-recurring` |
+| Draft the escape | `qwen3.7-plus` | `draft-cancellation` |
+| Negotiate retention | `qwen3.7-max` · `preserve_thinking` | `negotiate-retention` |
+
+**Custom Skills** → [`skills/`](skills/) (docs) + [`lib/skills/index.ts`](lib/skills/index.ts) (runtime). **MCP servers** → [`services/`](services/) (`cancel-directory` · `comms` · `calendar`). **Policy layer** → deterministic gates + keep-list + local PII redaction + hash-chained receipts.
+
+---
+
+## Human-in-the-loop gates
+
+1. **Gate 1 — approve the diagnosis** (per charge: keep · cut · ask; a keep is sacred).
+2. **Gate 2 — approve each cancellation** (accept · edit · skip; nothing leaves unapproved).
+3. **Gate 3 — approve the retention move** (take the offer · counter · cancel anyway).
+4. **Ask, don't guess** — below your confidence dial, Spout asks one targeted question instead of guessing.
+
+---
+
+## Configuration
+
+See [`.env.example`](.env.example). Everything is an env-var seam; nothing is hardcoded, no secret is committed. Client code only ever calls same-origin `/api/*` (no hardcoded hosts/ports).
+
+## Deploy
+
+See [`DEPLOY.md`](DEPLOY.md) — Vercel for the web/PWA build; Docker on Alibaba Cloud ECS/SAS (Singapore) for the eligibility gate.
+
+## Honest limitations
+
+- **Not 100% offline.** Line-item text (`merchant · amount · date`) hits Qwen Cloud, as required — we say so plainly; account numbers and PII don't (redacted on-device first).
+- **Decoding is sometimes wrong** — which is exactly why Gate 1 and "ask, don't guess" exist.
+- **Not every merchant auto-cancels** — portal/phone-only get honest packs, never a fake "cancelled everywhere."
+- **Reclaimed ≠ moved** — it's money you stop paying, shown per year.
+
+## Tech stack
+
+Next.js 15 (App Router) · React 19 · TypeScript · OpenAI SDK (→ Qwen compatible-mode) · pdf.js · PapaParse · `@modelcontextprotocol/sdk` · googleapis · self-hosted Fraunces / Space Mono / Space Grotesk. Art is hand-authored SVG (no diffusion model).
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+*Spout. Drop in your statement. Watch the leaks close.* **Your money, your call.**

@@ -39,10 +39,16 @@ export default function DiagnosisPage() {
 
 // ---------------------------------------------------------------- empty state
 function EmptyState() {
-  const { startDemo } = useStore();
+  const { startDemo, notice } = useStore();
   return (
     <div className="hero-center">
       <h1 className="big" style={{ fontSize: 34 }}>No statement loaded.</h1>
+      {notice && notice !== "baseline" && (
+        <div className="notice" style={{ maxWidth: 560, margin: "10px auto 4px", textAlign: "left" }}>
+          <span className="i">◆</span>
+          <div>{notice}</div>
+        </div>
+      )}
       <div className="sub" style={{ maxWidth: 520, margin: "6px auto 18px" }}>
         Drop your statement to find your leaks, or watch the 30-second demo.
       </div>
@@ -64,7 +70,7 @@ function Reading() {
         <div className="head">
           <div>
             <h2 className="sec">Reading your statement…</h2>
-            <div className="sub">A wall of cryptic lines → clean, named rows. <span className="spin" /> ~28&nbsp;seconds.</div>
+            <div className="sub">A wall of cryptic lines → clean, named rows. <span className="spin" /> usually under a minute — long statements take a little longer.</div>
           </div>
         </div>
         <div className="stages">
@@ -155,15 +161,24 @@ function Gate1() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/art/otter-gate.png" alt="the otter, waiting at the valve" />
         <div className="q">
-          <div className="t">Shut these {numWord(billCuts.length)}?</div>
-          <div className="s">
-            ${total}/yr reclaimed.{cuts.some((c) => c.cadence === "trial") ? " The trial I’ll cancel before it charges." : ""}
-            {askCount ? ` ${askCount === 1 ? "One charge" : `${askCount} charges`} I’ll ask you about.` : ""}
-          </div>
+          {cuts.length === 0 ? (
+            <>
+              <div className="t">Your call on {askCount === 1 ? "this one" : `these ${numWord(askCount)}`}.</div>
+              <div className="s">I don&apos;t guess — mark each flag <b>cut</b> or <b>keep</b> above, and I&apos;ll shut only what you cut.</div>
+            </>
+          ) : (
+            <>
+              <div className="t">Shut these {numWord(billCuts.length)}?</div>
+              <div className="s">
+                ${total}/yr reclaimed.{cuts.some((c) => c.cadence === "trial") ? " The trial I’ll cancel before it charges." : ""}
+                {askCount ? ` ${askCount === 1 ? "One charge" : `${askCount} charges`} I’ll ask you about.` : ""}
+              </div>
+            </>
+          )}
         </div>
         <div className="acts">
           <button className="btn brass" onClick={s.approveGate1} disabled={cuts.length === 0}>
-            Approve the {billCuts.length} cut{billCuts.length === 1 ? "" : "s"} →
+            {cuts.length === 0 ? "Mark a charge cut to continue" : `Approve the ${billCuts.length} cut${billCuts.length === 1 ? "" : "s"} →`}
           </button>
         </div>
       </div>

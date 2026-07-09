@@ -198,8 +198,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
-        patch({ phase: "idle", notice: e.message || "Could not read that statement." });
-        toast(e.message || "Could not read that statement.");
+        const message =
+          e.message ||
+          (res.status === 504 || res.status === 524
+            ? "The analysis took too long and the server timed out. Try the same file again — a retry usually goes through."
+            : "Could not read that statement.");
+        patch({ phase: "idle", notice: message });
+        toast(message);
         return;
       }
       const { diagnosis, mode } = await res.json();

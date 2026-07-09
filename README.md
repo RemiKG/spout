@@ -2,7 +2,7 @@
 
 **Your money's been going out the spout.** *A subscription is a faucet you forgot to close.*
 
-Drop in a bank or card statement. A little otter plumber reads it, **decodes every cryptic charge** — even the ones hidden in code (`SQ *GYM8XJ209 → Anytime Fitness`) — finds the silent ones (converted trials, price creeps, duplicates across cards, gray charges), and **shuts the ones you okay** from your own inbox, then argues with the "please don't go" screens for you. **You just nod.**
+Drop in a bank or card statement. A little otter plumber reads it, **decodes the cryptic recurring charges** — even the ones hidden in code (`SQ *GYM8XJ209 → Anytime Fitness`) — finds the silent ones (converted trials, price creeps, duplicates across cards, gray charges), and **shuts the ones you okay** from your own inbox, then argues with the "please don't go" screens for you. **You just nod.**
 
 > Track 4 · Autopilot Agent — **Qwen Cloud Global AI Hackathon**. The architecture diagram, the UI, and the demo are the **same top-to-bottom picture** — a waterworks you watch work.
 

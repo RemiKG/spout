@@ -69,6 +69,10 @@ export async function chat(opts: ChatOpts): Promise<OpenAI.Chat.ChatCompletionMe
     // DashScope thinking controls (passed through compatible-mode extra body).
     body.enable_thinking = true;
     body.preserve_thinking = true;
+  } else {
+    // Interactive stages must answer fast — qwen3.7 models default to thinking
+    // mode on DashScope, which adds 40–80s per call. Turn it off explicitly.
+    body.enable_thinking = false;
   }
 
   const res = (await client.chat.completions.create(body as never)) as OpenAI.Chat.ChatCompletion;

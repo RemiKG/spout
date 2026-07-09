@@ -1,7 +1,7 @@
 {
   "name": "Spout — watch the leaks close",
   "short_name": "Spout",
-  "description": "Drop your statement. An otter plumber decodes every cryptic charge, finds the silent ones, and shuts the ones you okay. Your money, your call.",
+  "description": "Drop your statement. An otter plumber decodes the cryptic recurring charges, finds the silent ones, and shuts the ones you okay. Your money, your call.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F4F1EA",

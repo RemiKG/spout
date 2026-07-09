@@ -31,8 +31,8 @@ export default function Landing() {
       </h1>
       <div className="lead" style={{ marginBottom: 4 }}>A subscription is a faucet you forgot to close.</div>
       <div className="sub" style={{ maxWidth: 620, margin: "12px auto 0" }}>
-        Drop in a bank or card statement. A little plumber reads it, decodes every cryptic charge, finds the silent
-        ones — and shuts the ones you okay. <b>You just nod.</b>
+        Drop in a bank or card statement. A little plumber reads it, decodes the cryptic recurring charges, finds the
+        silent ones — and shuts the ones you okay. <b>You just nod.</b>
       </div>
 
       <div className={`drop ${drag ? "drag" : ""}`} style={{ maxWidth: 640, margin: "26px auto 0" }}>

@@ -2,7 +2,7 @@
   "name": "spout",
   "version": "1.0.0",
   "private": true,
-  "description": "Spout — drop in a bank statement, an otter plumber decodes every cryptic charge, finds the silent ones, and shuts the ones you okay. Track 4 · Qwen Cloud Global AI Hackathon.",
+  "description": "Spout — drop in a bank statement, an otter plumber decodes the cryptic recurring charges, finds the silent ones, and shuts the ones you okay. Track 4 · Qwen Cloud Global AI Hackathon.",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",

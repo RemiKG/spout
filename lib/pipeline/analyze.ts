@@ -122,6 +122,7 @@ async function decodeClusters(clusters: Cluster[]): Promise<DecodedCluster[]> {
         '\nYou will get an ARRAY of clusters. Reply ONLY: {"results":[{"id","merchant","category","confidence"}]} — one per input id.',
       messages: [{ role: "user", content: JSON.stringify({ clusters: payload }) }],
       json: true,
+      temperature: 0,
     });
     const out = parseJson<{ results: { id: string; merchant: string | null; category?: string; confidence: number }[] }>(msg.content);
     const byId = new Map(out.results.map((r) => [r.id, r]));
@@ -160,6 +161,7 @@ async function detectPatterns(decoded: DecodedCluster[]): Promise<DetectedCharge
         "\nOnly return charges worth surfacing to the user (recurring subscriptions, trials, and silent leaks). Skip one-off purchases, groceries, rent, transfers and income.",
       messages: [{ role: "user", content: JSON.stringify({ charges: payload }) }],
       json: true,
+      temperature: 0,
       maxTokens: 2200,
     });
     const out = parseJson<{ charges: { id: string; cadence: Charge["cadence"]; amountMonthly: number; amountYear: number; reasons: Reason[]; verdict: Verdict }[] }>(msg.content);

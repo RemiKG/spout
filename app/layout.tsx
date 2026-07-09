@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://spout.local"),
   title: "Spout — watch the leaks close",
   description:
-    "Drop in a bank or card statement. A little plumber decodes every cryptic charge, finds the silent ones, and shuts the ones you okay — then argues with the 'please don't go' screens for you. You just nod.",
+    "Drop in a bank or card statement. A little plumber decodes the cryptic recurring charges, finds the silent ones, and shuts the ones you okay — then argues with the 'please don't go' screens for you. You just nod.",
   applicationName: "Spout",
   manifest: "/manifest.webmanifest",
   openGraph: {

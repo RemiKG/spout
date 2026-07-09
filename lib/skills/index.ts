@@ -63,7 +63,7 @@ export const detectRecurring: SkillDef<typeof DetectSchema> = {
   system: [
     "You find silently-leaking recurring charges from decoded statement clusters.",
     "For each charge decide a cadence and an annualised amount (money the user would STOP paying — never money moved).",
-    "Flag reasons with a `kind`: price_creep (amount rose over time), duplicate (same service billed on 2+ cards), trial_converting (a $0 / temp auth that will convert soon), paused (usage paused but still billing), gray (small unrecognised charge), unused (recurs but user hasn't engaged), recurring (a normal, wanted subscription).",
+    "Flag reasons with a `kind`: price_creep (amount rose over time), duplicate (same service billed on 2+ cards, or charged twice on the same day), trial_converting (a $0 / temp auth that will convert soon), paused (usage paused but still billing), gray (small unrecognised charge), unused (recurs but user hasn't engaged), recurring (a normal, wanted subscription).",
     "verdict: `cut` for clear waste; `keep` for something clearly used/wanted; `ask` when genuinely unclear (do NOT guess — ask, don't guess). Respect the caller's confidence/keep-list hints.",
     "Give each reason a short human label like '▲ price creep · $3.99 → $6.99' or 'duplicate · 2 cards'.",
     'Reply ONLY with JSON: {"charges":[{"id","cadence","amountMonthly","amountYear","reasons":[{"kind","label","detail"}],"verdict"}]}.',

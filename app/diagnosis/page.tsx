@@ -203,8 +203,8 @@ function ChargeRow({ charge }: { charge: Charge }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <span className={`amt ${charge.cadence === "trial" || v === "ask" ? "mut" : ""}`}>
-          {charge.cadence === "trial" ? "$0" : `$${charge.amountYear}`}
-          <small>{charge.cadence === "trial" ? `now → $${charge.amountYear}/yr` : `/yr · $${charge.amountMonthly}/mo`}</small>
+          {charge.cadence === "trial" ? "$0" : `$${charge.cadence === "one-off" ? charge.amountMonthly : charge.amountYear}`}
+          <small>{charge.cadence === "trial" ? `now → $${charge.amountYear}/yr` : charge.cadence === "one-off" ? "one-time overcharge" : `/yr · $${charge.amountMonthly}/mo`}</small>
         </span>
         <span className="seg">
           {(["keep", "cut", "ask"] as Verdict[]).map((k) => (

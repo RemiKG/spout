@@ -43,8 +43,17 @@ export async function analyzeStatement(lines: RawLine[], opts: AnalyzeOpts = {})
     const cl = clusters.find((c) => c.id === d.id)!;
     const merchant = d.merchant;
     const channel: Channel = (lookupMerchant(merchant)?.channel ?? "portal") as Channel;
-    const monthly = round2(d.amountMonthly);
-    const year = d.cadence === "annual" ? Math.round(d.amountMonthly) : Math.round(monthly * 12);
+    // a double-charge seen on a single day is a one-time overcharge, not a
+    // yearly leak — count the extra charge once, never annualise it
+    const uniqueDates = new Set(cl.occurrences.map((o) => o.date));
+    const oneDayDupe =
+      d.reasons.some((r) => r.kind === "duplicate") && uniqueDates.size === 1 && cl.occurrences.length >= 2;
+    const monthly = oneDayDupe
+      ? round2(cl.occurrences.reduce((s, o) => s + o.amount, 0) - Math.max(...cl.occurrences.map((o) => o.amount)))
+      : round2(d.amountMonthly);
+    const year = oneDayDupe
+      ? Math.round(monthly)
+      : d.cadence === "annual" ? Math.round(d.amountMonthly) : Math.round(monthly * 12);
 
     let verdict: Verdict = d.verdict;
     // ask, don't guess: low-confidence decodes/cut calls become questions
@@ -60,7 +69,7 @@ export async function analyzeStatement(lines: RawLine[], opts: AnalyzeOpts = {})
       merchant,
       category: d.category,
       confidence: d.confidence,
-      cadence: d.cadence,
+      cadence: oneDayDupe ? "one-off" : d.cadence,
       amountMonthly: monthly,
       amountYear: d.cadence === "trial" ? Math.round(monthly * 12) : year,
       reasons: d.reasons,
@@ -158,7 +167,7 @@ async function detectPatterns(decoded: DecodedCluster[]): Promise<DetectedCharge
     const msg = await chat({
       model: MODELS.detect,
       system: SKILLS.detectRecurring.system +
-        "\nOnly return charges worth surfacing to the user (recurring subscriptions, trials, and silent leaks). Skip one-off purchases, groceries, rent, transfers and income.",
+        "\nOnly return charges worth surfacing to the user (recurring subscriptions, trials, and silent leaks — a same-day duplicate charge IS a silent leak). Skip ordinary one-off purchases, groceries, rent, transfers and income.",
       messages: [{ role: "user", content: JSON.stringify({ charges: payload }) }],
       json: true,
       temperature: 0,

@@ -73,20 +73,31 @@ function csv(s: string): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/** Seed the standard event sequence for a completed diagnosis+shutoff (used by
- *  the demo path so the Ledger screen is populated exactly like the mock). */
-export function seedLedgerFromDiagnosis(d: Diagnosis, baseTs = "2026-07-08T09:41:02Z"): Ledger {
-  const led = new Ledger();
-  const t = (offsetSec: number) => new Date(new Date(baseTs).getTime() + offsetSec * 1000).toISOString();
-  led.append("read", { stmt: d.demo ? "demo-statement.csv" : "statement", lines: d.lines, redacted: ["acct", "balance", "name"] }, t(0));
-  d.charges.forEach((c, i) => {
-    led.append("decode", { raw: c.descriptor, merchant: c.merchant, conf: c.confidence }, t(17 + i));
-  });
-  d.charges.forEach((c, i) => {
+/** A reason's `detail` should be a structured object, but the detect model may
+ *  return a plain string — never spread a string (it explodes into per-char keys). */
+function detailFields(v: unknown): Record<string, unknown> {
+  if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
+  return v == null || v === "" ? {} : { detail: String(v) };
+}
+
+/** Seed the read/decode/detect/ask events for a completed diagnosis. Stamps are
+ *  real wall-clock times: the pipeline just finished, so the sequence is anchored
+ *  to end at "now", one line per second, in order. */
+export function seedLedgerFromDiagnosis(d: Diagnosis): Ledger {
+  const rows: { ev: LedgerEventType; data: Record<string, unknown> }[] = [
+    { ev: "read", data: { stmt: d.demo ? "demo-statement.csv" : "statement", lines: d.lines, redacted: ["acct", "balance", "name"] } },
+  ];
+  for (const c of d.charges) {
+    rows.push({ ev: "decode", data: { raw: c.descriptor, merchant: c.merchant, conf: c.confidence } });
+  }
+  for (const c of d.charges) {
     const r = c.reasons[0];
-    if (r && r.kind !== "recurring") led.append("detect", { merchant: c.merchant, pattern: r.kind, ...(r.detail || {}) }, t(30 + i));
-    if (c.verdict === "ask") led.append("ask", { merchant: c.merchant, q: r?.label ?? "needed, or abandoned?", guess: null }, t(30 + i));
-  });
+    if (r && r.kind !== "recurring") rows.push({ ev: "detect", data: { merchant: c.merchant, pattern: r.kind, ...detailFields(r.detail) } });
+    if (c.verdict === "ask") rows.push({ ev: "ask", data: { merchant: c.merchant, q: r?.label ?? "needed, or abandoned?", guess: null } });
+  }
+  const led = new Ledger();
+  const base = Date.now() - rows.length * 1000;
+  rows.forEach((row, i) => led.append(row.ev, row.data, new Date(base + (i + 1) * 1000).toISOString()));
   // NB: the live `gate1` event is appended by the store when the user approves —
   // the seed stops at read/decode/detect/ask so it isn't duplicated.
   return led;

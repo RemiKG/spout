@@ -84,6 +84,9 @@ button{font-family:inherit}
   background:var(--cream-lift);border:1px solid var(--hair);box-shadow:var(--shadow)}
 .canvas.sticky{position:sticky;top:96px}
 .canvas .cap{position:absolute;left:14px;top:12px;z-index:3}
+/* the corner pill sits over the drawn waterworks — keep it opaque so the art never bleeds through its text */
+.canvas .cap .chip{background:var(--cream-lift);box-shadow:0 4px 14px -8px rgba(16,38,59,.55);white-space:nowrap}
+.canvas .cap .chip.leak{background:#E8EEE9}
 .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:18px}
 .hero-center{position:relative;z-index:1;max-width:900px;margin:0 auto;text-align:center;padding:40px 26px 30px}
 
@@ -313,7 +316,9 @@ input[type=range]{accent-color:var(--teal)}
 .otter-corner{position:fixed;right:20px;bottom:0;z-index:1;pointer-events:none;display:flex;align-items:flex-end;gap:6px}
 .otter-corner img{width:290px;height:auto;opacity:.97;display:block}
 .otter-speech{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);max-width:150px;text-align:right;margin-bottom:150px}
-@media (max-width:1180px){ .otter-corner{opacity:.5} .otter-speech{display:none} }
+/* the speech bubble only fits clear of the centered hero copy on large displays */
+@media (max-width:1860px),(max-height:1000px){ .otter-speech{display:none} }
+@media (max-width:1180px){ .otter-corner{opacity:.5} }
 @media (max-width:860px){ .otter-corner{display:none} }
 
 /* ---------- responsive ---------- */

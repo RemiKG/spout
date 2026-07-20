@@ -104,8 +104,11 @@ function Gate1() {
   const d = s.diagnosis!;
   const cuts = d.charges.filter((c) => verdictOf(s, c) === "cut");
   const billCuts = cuts.filter((c) => c.cadence !== "trial");
-  const total = billCuts.reduce((a, c) => a + c.amountYear, 0);
+  // one-time overcharges (e.g. a same-day double charge) are shown once — never folded into $/yr
+  const total = billCuts.filter((c) => c.cadence !== "one-off").reduce((a, c) => a + c.amountYear, 0);
+  const oneTime = billCuts.filter((c) => c.cadence === "one-off").reduce((a, c) => a + c.amountMonthly, 0);
   const askCount = d.charges.filter((c) => verdictOf(s, c) === "ask").length;
+  const nShut = billCuts.length || cuts.length;
 
   return (
     <>
@@ -118,6 +121,7 @@ function Gate1() {
           <div style={{ marginLeft: "auto", textAlign: "right" }}>
             <div className="sub" style={{ margin: 0 }}>going out the spout</div>
             <SplitFlap value={`$${total}`} unit="/yr" size={34} />
+            {oneTime > 0 && <div className="sub" style={{ margin: "4px 0 0" }}>+ ${oneTime.toFixed(2)} one-time overcharge</div>}
           </div>
         </div>
         <div className="sub" style={{ marginTop: 12 }}>
@@ -168,9 +172,10 @@ function Gate1() {
             </>
           ) : (
             <>
-              <div className="t">Shut these {numWord(billCuts.length)}?</div>
+              <div className="t">{nShut === 1 ? "Shut this one?" : `Shut these ${numWord(nShut)}?`}</div>
               <div className="s">
-                ${total}/yr reclaimed.{cuts.some((c) => c.cadence === "trial") ? " The trial I’ll cancel before it charges." : ""}
+                {total > 0 ? `$${total}/yr reclaimed.` : ""}{oneTime > 0 ? ` $${oneTime.toFixed(2)} one-time overcharge back.` : ""}
+                {cuts.some((c) => c.cadence === "trial") ? " The trial I’ll cancel before it charges." : ""}
                 {askCount ? ` ${askCount === 1 ? "One charge" : `${askCount} charges`} I’ll ask you about.` : ""}
               </div>
             </>
@@ -178,7 +183,7 @@ function Gate1() {
         </div>
         <div className="acts">
           <button className="btn brass" onClick={s.approveGate1} disabled={cuts.length === 0}>
-            {cuts.length === 0 ? "Mark a charge cut to continue" : `Approve the ${billCuts.length} cut${billCuts.length === 1 ? "" : "s"} →`}
+            {cuts.length === 0 ? "Mark a charge cut to continue" : `Approve the ${nShut} cut${nShut === 1 ? "" : "s"} →`}
           </button>
         </div>
       </div>
@@ -203,7 +208,7 @@ function ChargeRow({ charge }: { charge: Charge }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <span className={`amt ${charge.cadence === "trial" || v === "ask" ? "mut" : ""}`}>
-          {charge.cadence === "trial" ? "$0" : `$${charge.cadence === "one-off" ? charge.amountMonthly : charge.amountYear}`}
+          {charge.cadence === "trial" ? "$0" : charge.cadence === "one-off" ? `$${charge.amountMonthly.toFixed(2)}` : `$${charge.amountYear}`}
           <small>{charge.cadence === "trial" ? `now → $${charge.amountYear}/yr` : charge.cadence === "one-off" ? "one-time overcharge" : `/yr · $${charge.amountMonthly}/mo`}</small>
         </span>
         <span className="seg">
@@ -241,6 +246,7 @@ function Shutoff() {
           <div style={{ marginLeft: "auto", textAlign: "right" }}>
             <div className="sub" style={{ margin: 0 }}>reclaimed so far</div>
             <SplitFlap value={`$${s.reclaimed}`} unit="↑" size={32} />
+            {s.reclaimedOnce > 0 && <div className="sub" style={{ margin: "4px 0 0" }}>+ ${s.reclaimedOnce.toFixed(2)} one-time</div>}
           </div>
         </div>
         {anyPending && (
@@ -279,7 +285,7 @@ function CancellationCard({ charge }: { charge: Charge }) {
         {sent ? (
           <span className="send-state"><span className="dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--teal)", display: "inline-block" }} /> sent from {s.inbox.email} · watching the reply thread</span>
         ) : (
-          <span className="amt" style={{ fontSize: 15 }}>+${charge.amountYear}/yr</span>
+          <span className="amt" style={{ fontSize: 15 }}>{charge.cadence === "one-off" ? `+$${charge.amountMonthly.toFixed(2)} one-time` : `+$${charge.amountYear}/yr`}</span>
         )}
       </div>
 
@@ -302,7 +308,7 @@ function CancellationCard({ charge }: { charge: Charge }) {
           )}
           {confirmed && (
             <div className="sub" style={{ marginTop: 10 }}>
-              ↳ Cut approved{s.inbox.connected ? "" : " — connect an inbox to actually send this one, or copy the draft above"}. Reclaimed <b>+${charge.amountYear}/yr</b>.
+              ↳ Cut approved{s.inbox.connected ? "" : " — connect an inbox to actually send this one, or copy the draft above"}. Reclaimed <b>{charge.cadence === "one-off" ? `+$${charge.amountMonthly.toFixed(2)} one-time` : `+$${charge.amountYear}/yr`}</b>.
             </div>
           )}
           {sent && <div className="sub" style={{ marginTop: 10 }}>↳ Sent. If they fire back a retention offer, <b>Gate 3</b> waits for your call.</div>}
@@ -391,7 +397,7 @@ function DoneView() {
       <div className="col">
         <div className="pan">
           <div className="eyebrow">the plumber&apos;s still on the pipes</div>
-          <h1 className="big" style={{ fontSize: 38, margin: "6px 0 6px" }}>Shut. <SplitFlap value={`$${s.reclaimed}`} unit="/yr" size={34} /> back in your stream.</h1>
+          <h1 className="big" style={{ fontSize: 38, margin: "6px 0 6px" }}>Shut. <SplitFlap value={`$${s.reclaimed}`} unit="/yr" size={34} />{s.reclaimedOnce > 0 ? ` + $${s.reclaimedOnce.toFixed(2)} one-time` : ""} back in your stream.</h1>
           <div className="sub">Every decode, decision, message and shut is on the record — timestamped and hash-chained.</div>
           <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
             <Link className="btn brass" href="/ledger">See the receipt ledger →</Link>

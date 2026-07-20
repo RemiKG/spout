@@ -117,6 +117,30 @@ function readAsDataUrl(file: File): Promise<string> {
   });
 }
 
+/** Phone photos routinely run 5–12 MB; the upload path caps near 4 MB. Statement
+ *  text survives a ~2200px JPEG easily, so big images are downscaled on-device
+ *  before anything leaves the browser (small files pass through untouched). */
+async function imageToDataUrl(file: File): Promise<string> {
+  if (file.size <= 2_500_000) return readAsDataUrl(file);
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 2200 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bmp.width * scale));
+    canvas.height = Math.max(1, Math.round(bmp.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no canvas");
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close();
+    let out = canvas.toDataURL("image/jpeg", 0.85);
+    if (out.length > 3_500_000) out = canvas.toDataURL("image/jpeg", 0.6);
+    return out;
+  } catch {
+    // format the browser can't decode (e.g. HEIC) — send as-is and let the server answer
+    return readAsDataUrl(file);
+  }
+}
+
 export async function parseFile(file: File): Promise<ParseResult> {
   const name = file.name.toLowerCase();
   const type = file.type;
@@ -124,7 +148,7 @@ export async function parseFile(file: File): Promise<ParseResult> {
     return { kind: "csv", lines: parseCsv(await file.text()) };
   }
   if (type.startsWith("image/")) {
-    return { kind: "image", lines: [], imageDataUrl: await readAsDataUrl(file), needsVL: true };
+    return { kind: "image", lines: [], imageDataUrl: await imageToDataUrl(file), needsVL: true };
   }
   if (name.endsWith(".pdf") || type === "application/pdf") {
     const { lines } = await parsePdf(file);

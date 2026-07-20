@@ -40,6 +40,8 @@ interface StoreState {
   cancellations: Record<string, Cancellation>;
   negotiation: Negotiation | null;
   reclaimed: number;
+  /** one-time overcharges recovered this session (e.g. a same-day double charge) — never annualised */
+  reclaimedOnce: number;
   ledgerEvents: LedgerEvent[];
   settings: Settings;
   keepList: string[];
@@ -87,7 +89,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const ledgerRef = useRef(new Ledger());
   const [s, setS] = useState<StoreState>({
     ready: false, caps: null, phase: "idle", demo: false, stage: 0,
-    diagnosis: null, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0,
+    diagnosis: null, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0, reclaimedOnce: 0,
     ledgerEvents: [], settings: DEFAULT_SETTINGS, keepList: DEFAULT_KEEPLIST,
     inbox: { configured: false, connected: false, email: null }, connectOpen: false,
     toasts: [], notice: null, redactionReport: null,
@@ -167,7 +169,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const applyVerdictsToDiagnosis = (d: Diagnosis): Diagnosis => d;
 
   const startDemo = useCallback(async () => {
-    patch({ phase: "reading", demo: true, stage: 0, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0, notice: null, redactionReport: ["acct", "balance", "name"] });
+    patch({ phase: "reading", demo: true, stage: 0, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0, reclaimedOnce: 0, notice: null, redactionReport: ["acct", "balance", "name"] });
     await runReading();
     try {
       const { diagnosis } = await fetch("/api/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ demo: true }) }).then((r) => r.json());
@@ -182,7 +184,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [persist]);
 
   const analyzeFile = useCallback(async (file: File) => {
-    patch({ phase: "reading", demo: false, stage: 0, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0, notice: null });
+    patch({ phase: "reading", demo: false, stage: 0, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0, reclaimedOnce: 0, notice: null });
     try {
       const parsed = await parseFile(file);
       let payload: Record<string, unknown>;
@@ -200,7 +202,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const e = await res.json().catch(() => ({}));
         const message =
           e.message ||
-          (res.status === 504 || res.status === 524
+          (res.status === 413
+            ? "That file is over the upload limit (about 4 MB). Photos are shrunk on your device automatically — try again, or use a CSV/PDF export."
+            : res.status === 504 || res.status === 524
             ? "The analysis took too long and the server timed out. Try the same file again — a retry usually goes through."
             : "Could not read that statement.");
         patch({ phase: "idle", notice: message });
@@ -221,7 +225,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [s.settings, s.keepList, toast, persist]);
 
   const reset = useCallback(() => {
-    patch({ phase: "idle", diagnosis: null, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0, demo: false, notice: null, redactionReport: null });
+    patch({ phase: "idle", diagnosis: null, verdicts: {}, cancellations: {}, negotiation: null, reclaimed: 0, reclaimedOnce: 0, demo: false, notice: null, redactionReport: null });
   }, []);
 
   const setVerdict = useCallback((id: string, v: Verdict) => {
@@ -239,8 +243,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const asks = d.charges.filter((c) => (s.verdicts[c.id] ?? c.verdict) === "ask");
     const keeps = d.charges.filter((c) => (s.verdicts[c.id] ?? c.verdict) === "keep");
     const billCuts = cuts.filter((c) => c.cadence !== "trial");
-    const totalYear = billCuts.reduce((a, c) => a + c.amountYear, 0);
-    ledgerRef.current.append("gate1", { decision: "approve", cut: billCuts.length, keep: keeps.length + d.kept.length, ask: asks.length, kept_yr: totalYear });
+    // one-time overcharges (e.g. a same-day double charge) are counted once, never as $/yr
+    const totalYear = billCuts.filter((c) => c.cadence !== "one-off").reduce((a, c) => a + c.amountYear, 0);
+    const oneTime = billCuts.filter((c) => c.cadence === "one-off").reduce((a, c) => a + c.amountMonthly, 0);
+    ledgerRef.current.append("gate1", { decision: "approve", cut: billCuts.length, keep: keeps.length + d.kept.length, ask: asks.length, kept_yr: totalYear, ...(oneTime > 0 ? { one_time: Math.round(oneTime * 100) / 100 } : {}) });
     // draft each cut
     const cancellations: Record<string, Cancellation> = {};
     for (const c of cuts) {
@@ -280,11 +286,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const finalizeSend = useCallback((c: Cancellation, sentReal: boolean) => {
     // a trial we cancel before it charges prevents a FUTURE charge — it isn't
     // money you're currently paying, so it doesn't climb the "reclaimed" gauge.
+    // a one-time overcharge is real money back, but it's counted once, never as $/yr.
     const charge = s.diagnosis?.charges.find((x) => x.id === c.chargeId);
-    const add = charge?.cadence === "trial" ? 0 : c.amountYear;
+    const addYear = !charge || charge.cadence === "trial" || charge.cadence === "one-off" ? 0 : c.amountYear;
+    const addOnce = charge?.cadence === "one-off" ? charge.amountMonthly : 0;
     setS((p) => ({
       ...p,
-      reclaimed: p.reclaimed + add,
+      reclaimed: p.reclaimed + addYear,
+      reclaimedOnce: Math.round((p.reclaimedOnce + addOnce) * 100) / 100,
       cancellations: { ...p.cancellations, [c.chargeId]: { ...c, state: sentReal ? "sent" : "confirmed", sentReal } },
     }));
     ledgerRef.current.append(sentReal ? "send" : "confirm", { merchant: c.merchant, to: c.to, from: s.inbox.email || undefined, idem: c.chargeId.slice(0, 4) });
@@ -318,6 +327,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const approveAll = useCallback(async () => {
     const cuts = cutCharges();
     let reclaimedRunning = s.reclaimed;
+    let onceRunning = s.reclaimedOnce;
     for (const c of cuts) {
       const can = s.cancellations[c.id];
       if (!can || can.state === "sent" || can.state === "confirmed" || can.state === "skipped") continue;
@@ -327,9 +337,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         try { const r = await fetch("/api/gmail/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: can.to, subject: can.subject, body: can.body }) }); sentReal = r.ok; } catch { sentReal = false; }
       }
       ledgerRef.current.append("gate2", { merchant: can.merchant, decision: "approve_send" });
-      reclaimedRunning += c.cadence === "trial" ? 0 : can.amountYear;
+      if (c.cadence === "one-off") onceRunning = Math.round((onceRunning + c.amountMonthly) * 100) / 100;
+      else if (c.cadence !== "trial") reclaimedRunning += can.amountYear;
       const stateNext: Cancellation["state"] = can.channel !== "email" ? "pack_ready" : sentReal ? "sent" : "confirmed";
-      setS((p) => ({ ...p, reclaimed: reclaimedRunning, cancellations: { ...p.cancellations, [c.id]: { ...can, state: stateNext, sentReal } } }));
+      setS((p) => ({ ...p, reclaimed: reclaimedRunning, reclaimedOnce: onceRunning, cancellations: { ...p.cancellations, [c.id]: { ...can, state: stateNext, sentReal } } }));
       ledgerRef.current.append(sentReal ? "send" : "confirm", { merchant: can.merchant, to: can.to, from: s.inbox.email || undefined, idem: c.id.slice(0, 4) });
       syncLedger();
       playClunk();
@@ -340,7 +351,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const retention = cuts.find((c) => s.cancellations[c.id]?.channel === "email");
     if (retention) { await sleep(500); revealRetention(retention); }
     else { patch({ phase: "done" }); toast("Shut. Your spout's tighter."); }
-  }, [cutCharges, s.cancellations, s.inbox, s.reclaimed, playClunk, persist, revealRetention, toast]);
+  }, [cutCharges, s.cancellations, s.inbox, s.reclaimed, s.reclaimedOnce, playClunk, persist, revealRetention, toast]);
 
   const chooseGate3 = useCallback((choice: "take" | "counter" | "cancel") => {
     const neg = s.negotiation; if (!neg) return;

@@ -29,8 +29,8 @@ export default function LedgerPage() {
   const comparison = d?.comparison ?? [
     { what: "obvious monthly dupes", regex: "yes", spout: "yes" },
     { what: "cryptic descriptor → merchant", regex: "no", spout: "yes" },
-    { what: "price creep ($3.99→$6.99)", regex: "no", spout: "yes" },
-    { what: "trial converting in 3 days", regex: "no", spout: "yes" },
+    { what: "price creep", regex: "no", spout: "yes" },
+    { what: "trial converting", regex: "no", spout: "yes" },
     { what: "same service, 2 cards", regex: "partial", spout: "yes" },
   ];
   const mark = (v: string) => (v === "yes" ? "✓" : v === "partial" ? "~" : "✗");
@@ -79,11 +79,13 @@ export default function LedgerPage() {
                   <td className={r.spout === "yes" ? "yes" : "no"}>{mark(r.spout)}</td>
                 </tr>
               ))}
-              <tr>
-                <td><b>total caught</b></td>
-                <td className="no"><b>{d?.regexCaught ?? 2}</b></td>
-                <td className="yes"><b>{d?.spoutCaught ?? 7}</b></td>
-              </tr>
+              {d && (
+                <tr>
+                  <td><b>total caught this run</b></td>
+                  <td className="no"><b>{d.regexCaught}</b></td>
+                  <td className="yes"><b>{d.spoutCaught}</b></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
